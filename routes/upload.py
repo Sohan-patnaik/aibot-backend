@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 import re
 import uuid
-from controllers.ingestion_controller import IngestionController
+from backend.controllers.ingestion_controller import IngestionController
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 ENV_PATH = os.path.join(BASE_DIR, ".env")
@@ -30,27 +30,22 @@ async def create_bot(
 ):
 
     try:
-        # ✅ Validate file
         if not file.filename.lower().endswith(".pdf"):
             raise HTTPException(status_code=400, detail="Only PDF files are allowed")
 
-        # Read file once
         content = await file.read()
 
         if not content:
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-        # ✅ Safe bot name
         safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", bot_name)
 
         user_id = "default_user"
 
-        # Avoid filename collisions
         unique_id = str(uuid.uuid4())[:8]
 
         storage_path = f"bot-files/{user_id}/{safe_name}_{unique_id}.pdf"
 
-        # ✅ Upload to Supabase storage
         try:
             supabase.storage.from_("bot-files").upload(
                 storage_path,
@@ -64,14 +59,12 @@ async def create_bot(
             print("Supabase upload error:", e)
             raise HTTPException(status_code=500, detail=f"Storage upload failed: {e}")
 
-        # ✅ Save locally for ingestion
         file_path = os.path.join(UPLOAD_DIR, f"{safe_name}_{unique_id}.pdf")
 
         with open(file_path, "wb") as f:
             f.write(content)
 
         bot_id = f"{safe_name}_{unique_id}"
-        # Run ingestion pipeline
         try:
             controller = IngestionController(file_path, bot_id)
             controller.build_vectorstore()
@@ -79,7 +72,6 @@ async def create_bot(
             print("Ingestion error:", e)
             raise HTTPException(status_code=500, detail=f"Ingestion failed: {e}")
 
-        # ✅ Insert bot metadata
         bot_data = {
             "owner": user_id,
             "name": bot_name,

@@ -1,6 +1,6 @@
-from services.ingestion_service import Ingestion
-from services.embedding_service import EmbeddingService
-from services.retrieval_service import Retrieval
+from backend.services.ingestion_service import Ingestion
+from backend.services.embedding_service import EmbeddingService
+from backend.services.retrieval_service import Retrieval
 
 
 class IngestionController:
@@ -13,16 +13,12 @@ class IngestionController:
 
     def build_vectorstore(self):
 
-        # 1️⃣ Load documents
         docs = self.ingestion.scrape()
 
-        # 2️⃣ Chunk documents
         chunks = self.retrieval.chunk(docs)
 
-        # 3️⃣ Get embedding model
         embedding = self.embedding_service.get_embedding()
 
-        # 4️⃣ Store vector database
         self.retrieval.store(
             chunks,
             embedding
